@@ -1,0 +1,7 @@
+services:
+  deckcraft-web:
+    image: ghcr.io/mikapst/deckcraft-web:latest
+    container_name: deckcraft-web
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
