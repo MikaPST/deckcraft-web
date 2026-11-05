@@ -98,7 +98,7 @@ jobs:
                   try_files $uri $uri/ /index.html;
               }
 
-              location ~* \.[a-f0-9]{8,}\.(js|wasm|css)$ {
+              location ~* \.[a-f0-9]+\.(js|wasm|css)$ {
                   add_header Cache-Control "public, max-age=31536000, immutable";
               }
           }
