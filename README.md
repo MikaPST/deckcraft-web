@@ -3,17 +3,24 @@
 </p>
 
 <h1 align="center">DeckCraft Web — Docker Image</h1>
-
 <p align="center">
   A self-hosted browser build of DeckCraft, an open-source presentation and slide designer.
   <br>
   Packaged as a lightweight static web application and published to GitHub Container Registry.
 </p>
-
 <p align="center">
-  <a href="https://github.com/MikaPST/deckcraft-web/actions/workflows/publish-image.yml"><img src="https://github.com/MikaPST/deckcraft-web/actions/workflows/publish-image.yml/badge.svg" alt="Build and publish image"></a>
-  <a href="https://ghcr.io/mikapst/deckcraft-web"><img src="https://img.shields.io/badge/GHCR-latest-blue?logo=docker" alt="GHCR"></a>
-  <img src="https://img.shields.io/badge/Docker%20Compose-supported-blue?logo=docker" alt="Docker Compose">
+  <a href="https://github.com/MikaPST/deckcraft-web/actions/workflows/publish-image.yml">
+    <img src="https://github.com/MikaPST/deckcraft-web/actions/workflows/publish-image.yml/badge.svg" alt="Build and publish DeckCraft Web">
+  </a>
+  <a href="https://github.com/MikaPST/deckcraft-web/releases/latest">
+    <img src="https://img.shields.io/github/v/release/MikaPST/deckcraft-web?label=Release&logo=github&color=blue" alt="Latest Release">
+  </a>
+  <a href="https://github.com/MikaPST/deckcraft-web/pkgs/container/deckcraft-web">
+    <img src="https://ghcr-badge.egpl.dev/mikapst/deckcraft-web/latest_tag?trim=major&label=GHCR" alt="GHCR image tag">
+  </a>
+  <a href="docker-compose.yml">
+    <img src="https://img.shields.io/badge/Docker%20Compose-ready-2496ED?logo=docker&logoColor=white" alt="Docker Compose configuration">
+  </a>
 </p>
 
 ---
@@ -24,6 +31,7 @@ This repository provides a Docker image for the official [DeckCraft](https://git
 
 The goal is to make DeckCraft easy to deploy on a self-hosted server such as Unraid, without having to build the application manually.
 
+- Publish a matching GitHub Release only after the Docker build and push succeed.
 - Build the web application directly from the official upstream repository.
 - Automatically publish the resulting Docker image to GitHub Container Registry (GHCR).
 - Rebuild periodically to follow upstream changes.
@@ -55,6 +63,14 @@ The image is published on GitHub Container Registry:
 ```text
 ghcr.io/mikapst/deckcraft-web:latest
 ```
+
+Each official upstream release is also published under its exact version tag, for example:
+
+```text
+ghcr.io/mikapst/deckcraft-web:vX.Y.Z
+```
+
+Use a versioned tag if you want to keep a deployment on a specific release. The `latest` tag updates when an image is published.
 
 ### Option 1 — Docker Compose (recommended)
 
@@ -141,27 +157,31 @@ DeckCraft uses browser graphics APIs. WebGPU generally requires a secure context
 
 ## Automated builds
 
-The GitHub Actions workflow builds the web application from the official `storytold/deckcraft` repository and publishes the resulting image to GHCR.
+GitHub Actions checks the official [DeckCraft releases](https://github.com/storytold/deckcraft/releases), builds the WebAssembly application from the selected upstream tag and publishes the image to GHCR.
 
 | Trigger | Behaviour |
 |---|---|
-| Weekly schedule | Checks for upstream changes and rebuilds the image |
-| Manual execution | Allows a build to be started manually |
-| Packaging changes | Rebuilds when the workflow, README or Compose file changes |
+| Weekly schedule | Checks the latest official DeckCraft release and builds it if it has not already been published here |
+| Manual workflow dispatch | Builds the latest official release, or a specified `upstream_tag` |
+| Force rebuild | Rebuilds an already published version with `force_rebuild: true` |
+| Changes to packaging files on `main` | Rebuilds the current official upstream release with the updated workflow |
 
-Published tags:
+### Published tags
 
-- `latest` — the most recent successful build.
-- `upstream-<commit>` — the upstream commit used for that build.
+- `latest` — the latest successfully published image (mutable tag).
+- `<upstream-version>` — the exact official upstream tag, for example `vX.Y.Z`.
+- `upstream-<commit>` — the upstream source commit used for the image (first 12 hexadecimal characters).
 
-Supported image architectures:
+The image targets both `linux/amd64` and `linux/arm64`. The workflow checks out **the official upstream release tag**, rather than compiling `main` as the versioned source.
 
-- `linux/amd64`
-- `linux/arm64`
+### GitHub Releases
 
-> **Important:** DeckCraft is under active development and is currently in alpha. The `latest` tag is mutable and may contain changes or regressions from upstream. For a stable deployment, consider pinning a specific image digest.
+After a successful Docker build and GHCR push, the workflow creates or updates a [GitHub Release](https://github.com/MikaPST/deckcraft-web/releases) matching the upstream tag. It includes the upstream release notes, source link and commit, Docker tags, supported architectures and (when available) the published image digest.
 
-The workflow has been prepared but must be validated by its first execution in GitHub Actions. Until that run succeeds, the build and publication process should be considered unverified.
+The Release badge at the top of this README updates automatically. Scheduled runs skip versions already released here. You can force a rebuild from **Actions → Build and publish DeckCraft Web → Run workflow**.
+
+> [!IMPORTANT]
+> A GitHub Release is created only after the Docker image has been successfully published. The `latest` tag may change after a rebuild; pin a versioned image tag for a stable deployment. Auxiliary source repositories (for example `craft-fonts`) may be checked out separately and are not necessarily pinned to the upstream release commit.
 
 ## Unraid Community Applications
 
@@ -170,6 +190,7 @@ This image can be used with Unraid through Docker Compose or a Community Applica
 The Unraid template is maintained separately in the [MikaPST/unraid-community-apps](https://github.com/MikaPST/unraid-community-apps) repository.
 
 This repository contains the Docker image build and publication workflow; the Community Applications repository contains the Unraid-specific template.
+- **Template:** [deckcraft-web.xml](https://github.com/MikaPST/unraid-community-apps/blob/main/templates/deckcraft-web.xml)
 
 ## Upstream project
 
@@ -190,6 +211,8 @@ The upstream project documents its browser build as a static WebAssembly site. N
 - **Releases:** [GitHub Releases](https://github.com/storytold/deckcraft/releases)
 
 This repository packages the upstream web application for Docker. It does not include the native desktop application, CLI or MCP server.
+
+The MikaPST GitHub Release tracks the upstream version but represents independent Docker packaging, not an official DeckCraft distribution.
 
 ## License and attribution
 
