@@ -1,13 +1,16 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/storytold/deckcraft/main/assets/app-icon/hicolor/256x256/apps/ai.storyteller.deckcraft.png" width="128" height="128" alt="DeckCraft icon">
+  <img src="https://raw.githubusercontent.com/storytold/deckcraft/main/assets/app-icon/hicolor/256x256/apps/ai.storyteller.deckcraft.png" width="128" height="128" alt="DeckCraft application icon">
 </p>
 
 <h1 align="center">DeckCraft Web — Docker Image</h1>
 <p align="center">
-  A self-hosted browser build of DeckCraft, an open-source presentation and slide designer.
+  A community-maintained Docker image for
+  <a href="https://github.com/storytold/deckcraft">DeckCraft</a>,
+  providing its browser-based presentation editor through a self-hosted web interface.
   <br>
-  Packaged as a lightweight static web application and published to GitHub Container Registry.
+  Build automation and image publication to GitHub Container Registry (GHCR).
 </p>
+
 <p align="center">
   <a href="https://github.com/MikaPST/deckcraft-web/actions/workflows/publish-image.yml">
     <img src="https://github.com/MikaPST/deckcraft-web/actions/workflows/publish-image.yml/badge.svg" alt="Build and publish DeckCraft Web">
@@ -27,54 +30,50 @@
 
 ## Why this repository?
 
-This repository provides a Docker image for the official [DeckCraft](https://github.com/storytold/deckcraft) web application.
+The official DeckCraft project includes a WebAssembly version that can be hosted as a static website. This repository packages it into a Docker image for straightforward self-hosting.
 
-The goal is to make DeckCraft easy to deploy on a self-hosted server such as Unraid, without having to build the application manually.
+The goals are to:
 
-- Publish a matching GitHub Release only after the Docker build and push succeed.
-- Build the web application directly from the official upstream repository.
-- Automatically publish the resulting Docker image to GitHub Container Registry (GHCR).
-- Rebuild periodically to follow upstream changes.
-- Provide a simple Docker Compose configuration.
-- Make the image suitable for Unraid and other Docker environments.
-- Keep the Docker packaging separate from the upstream application.
+- Build DeckCraft Web from the **official upstream release source**, not an unrelated branch head.
+- Publish ready-to-run Docker images to GHCR for `linux/amd64` and `linux/arm64`.
+- Detect newly published official versions automatically and publish matching, versioned images.
+- Create a matching GitHub Release with the official release notes **after** successful image publication.
+- Provide a deployment option for Unraid Community Applications.
+- Include a ready-to-use Docker Compose file.
+- Maintain Docker, NGINX and build automation independently of the upstream application.
+- Keep all packaging files version-controlled rather than generating Docker and NGINX configurations inside a workflow.
 
-This repository is a packaging project only. It is not a fork of DeckCraft and does not modify the upstream source code.
+This is a packaging and distribution project, not a fork intended to develop a separate presentation editor.
 
 ## How it works
 
-DeckCraft is an open-source presentation and slide designer written in Rust. Its web version runs in the browser through WebAssembly and uses `eframe`/`wgpu`, with WebGPU and a WebGL2 fallback.
+DeckCraft is an open-source presentation and slide editor written in Rust. Its web version runs in the browser using WebAssembly, with WebGPU rendering and a WebGL2 fallback when supported.
 
-The application provides tools for creating and editing slide decks, including layouts, themes, shapes, text, pictures, tables, charts, transitions and animations. The upstream project is currently in alpha, so capabilities and compatibility may evolve.
+- **Browser-based interface:** create and edit slides directly from a browser.
+- **Presentation tools:** layouts, themes, text, shapes, images, charts, tables, transitions and animations; exact feature availability follows the upstream release.
+- **File operations:** the web application handles opening, saving and exporting presentations in the browser, without a server-side document service.
+- **No remote desktop:** no VNC, Linux desktop session or dedicated backend is required.
+- **Self-hosted:** serve the editor from your own Unraid or Docker host, optionally behind a secure reverse proxy.
 
-The Docker image:
-
-- Serves the prebuilt DeckCraft web application as static files using NGINX.
-- Does not run a desktop session or remote desktop.
-- Does not add a server-side presentation engine or processing backend.
-- Does not provide server-side user accounts or centralized document storage.
-
-The browser application handles its own interaction and rendering. Do not assume that presentations are automatically stored on the Docker host: persistence and file handling depend on the web application's current implementation and browser capabilities.
+DeckCraft supports `.pptx` and its own `.deckcraft` presentation format, and has a browser-based host integration contract (`?host=parent`) for same-origin embedding. The container only delivers static assets. It does not automatically retain users' slides on the server.
 
 ## Docker image
 
-The image is published on GitHub Container Registry:
+The image is published to GitHub Container Registry:
 
 ```text
 ghcr.io/mikapst/deckcraft-web:latest
 ```
 
-Each official upstream release is also published under its exact version tag, for example:
+Each packaged official release is also published under its exact upstream version tag, for example:
 
 ```text
-ghcr.io/mikapst/deckcraft-web:vX.Y.Z
+ghcr.io/mikapst/deckcraft-web:v0.19.0
 ```
-
-Use a versioned tag if you want to keep a deployment on a specific release. The `latest` tag updates when an image is published.
 
 ### Option 1 — Docker Compose (recommended)
 
-Create a `docker-compose.yml` file:
+A `docker-compose.yml` file is included at the repository root:
 
 ```yaml
 services:
@@ -86,52 +85,41 @@ services:
     restart: unless-stopped
 ```
 
-Start the container:
+Start DeckCraft Web from the repository root:
 
 ```bash
 docker compose up -d
 ```
 
-Open DeckCraft in your browser:
+Open the interface:
 
 ```text
 http://YOUR_SERVER_IP:8080
 ```
 
+Replace `YOUR_SERVER_IP` with your server's address. On the Docker host itself, `http://localhost:8080` is also suitable.
+
 #### Useful Compose commands
 
-View container logs:
-
 ```bash
+# Inspect logs
 docker compose logs -f
-```
 
-Update the image:
-
-```bash
+# Pull updates and recreate the container
 docker compose pull
 docker compose up -d
-```
 
-Stop and remove the container:
-
-```bash
+# Stop and remove the container
 docker compose down
 ```
 
-The container listens on port `8080`. No volume or environment variable is required by this static web image.
+This basic setup requires no `.env` file, database or persistent Docker volume. To select another host port, change the left side of the mapping, for example `8091:8080`.
 
 ### Option 2 — Run directly with Docker
 
-Pull the image:
-
 ```bash
 docker pull ghcr.io/mikapst/deckcraft-web:latest
-```
 
-Run the container:
-
-```bash
 docker run -d \
   --name deckcraft-web \
   --restart unless-stopped \
@@ -139,93 +127,144 @@ docker run -d \
   ghcr.io/mikapst/deckcraft-web:latest
 ```
 
-Then open:
-
-```text
-http://YOUR_SERVER_IP:8080
-```
+Open the application at `http://YOUR_SERVER_IP:8080`.
 
 ### Network access and reverse proxies
 
-The container exposes an HTTP service on port `8080`.
+The container listens on port `8080` over HTTP. For public access, terminate HTTPS using a reverse proxy such as Traefik or NGINX Proxy Manager and restrict access as appropriate.
 
-You can place it behind a reverse proxy such as Traefik or NGINX Proxy Manager to access it through a domain name and HTTPS.
+DeckCraft uses WebGPU when available, which generally requires **HTTPS or localhost**. WebGL2 is the browser fallback. The upstream web hosting guide does not require special SharedArrayBuffer isolation headers.
 
-For public access, use HTTPS through a reverse proxy rather than exposing the unencrypted HTTP endpoint directly to the Internet.
+NGINX serves `.wasm` with `application/wasm`, compresses static assets, revalidates `index.html` and caches content-hashed JavaScript and WebAssembly assets. If you embed DeckCraft in an iframe, do not add `X-Frame-Options: DENY` or a `frame-ancestors` policy that forbids your embedding origin. The upstream host bridge (`?host=parent`) is restricted to the same origin.
 
-DeckCraft uses browser graphics APIs. WebGPU generally requires a secure context (HTTPS, or localhost); WebGL2 is available as a fallback where supported by the browser and device.
+## Repository structure
+
+This repository maintains its own Docker packaging while retrieving the official DeckCraft release source during the build.
+
+```text
+deckcraft-web/
+├── .github/
+│   └── workflows/
+│       └── publish-image.yml
+├── .dockerignore
+├── Dockerfile
+├── nginx.conf
+├── docker-compose.yml
+└── README.md
+```
+
+| File | Purpose |
+|---|---|
+| `Dockerfile` | Builds the NGINX runtime image from prepared static files, includes upstream notices and provides a health check. |
+| `nginx.conf` | Configures WebAssembly MIME handling, caching, gzip, security headers and `/healthz`. |
+| `.dockerignore` | Keeps the Docker build context limited to the generated site and required legal notices. |
+| `docker-compose.yml` | Defines the standard Docker Compose deployment. |
+| `.github/workflows/publish-image.yml` | Detects releases, builds the WebAssembly site, publishes multi-platform GHCR images and creates GitHub Releases. |
+| `README.md` | Documents the application, deployment, packaging and attribution. |
+
+### Docker build architecture
+
+The image uses **official DeckCraft source code** and separate Docker packaging maintained in this repository. The official browser build is based on **Rust, WebAssembly and Trunk**.
+
+The build process follows these steps:
+
+1. GitHub Actions identifies the latest published DeckCraft release or the requested official tag.
+2. The workflow checks out that exact release under `upstream/`.
+3. It reads the `craft-fonts-ref` pinned in the selected upstream release's `.github/workflows/release.yml` and checks out that exact `storytold/craft-fonts` commit.
+4. It installs Rust `1.96.1`, the `wasm32-unknown-unknown` target and Trunk.
+5. It builds the application with `trunk build --release` from `upstream/apps/deckcraft-web`. The official Trunk configuration places files under `upstream/dist/web/` with relative URLs.
+6. The workflow validates `index.html`, generated `.js` and `.wasm` files, and relative asset URLs.
+7. It assembles the web files, repository-managed `Dockerfile`, `nginx.conf`, `.dockerignore`, and the available application and font license notices into a temporary image context.
+8. Docker Buildx publishes the runtime image to GHCR for `linux/amd64` and `linux/arm64`.
+9. Only after the successful image push does the workflow create or update the matching GitHub Release.
+
+The application is compiled once into architecture-independent browser assets, then packaged for both supported container architectures. The NGINX image runs as a **non-root user**, listens on port `8080` and exposes `/healthz` with a Docker health check.
+
+Unlike WordCraft, DeckCraft's checked release build does not require a separate `craft-i18n` checkout in this packaging workflow. The required `craft-fonts` revision is sourced from the upstream release itself to avoid accidentally embedding assets from a floating `main` branch.
+
+> [!NOTE]
+> New upstream releases may change Rust requirements, font manifests or build output structure. The GitHub Actions build is the authoritative integration test for each official version.
 
 ## Automated builds
 
-GitHub Actions checks the official [DeckCraft releases](https://github.com/storytold/deckcraft/releases), builds the WebAssembly application from the selected upstream tag and publishes the image to GHCR.
+GitHub Actions monitors the official DeckCraft releases, and packaging changes on this repository trigger rebuilding the latest upstream version.
 
 | Trigger | Behaviour |
 |---|---|
-| Weekly schedule | Checks the latest official DeckCraft release and builds it if it has not already been published here |
-| Manual workflow dispatch | Builds the latest official release, or a specified `upstream_tag` |
-| Force rebuild | Rebuilds an already published version with `force_rebuild: true` |
-| Changes to packaging files on `main` | Rebuilds the current official upstream release with the updated workflow |
+| Daily schedule | Checks the latest published official DeckCraft release and builds it if it is not published here |
+| Manual workflow dispatch | Builds the latest official release, or a selected `upstream_tag` |
+| Force rebuild | Rebuilds an already published version and updates its matching GitHub Release |
+| Packaging changes on `main` | Rebuilds the latest upstream release when the README, workflow, Dockerfile, NGINX, `.dockerignore` or Compose configuration changes |
 
 ### Published tags
 
-- `latest` — the latest successfully published image (mutable tag).
-- `<upstream-version>` — the exact official upstream tag, for example `vX.Y.Z`.
-- `upstream-<commit>` — the upstream source commit used for the image (first 12 hexadecimal characters).
+Every successful build publishes these image tags:
 
-The image targets both `linux/amd64` and `linux/arm64`. The workflow checks out **the official upstream release tag**, rather than compiling `main` as the versioned source.
+- `latest` — the most recently packaged official release (mutable).
+- `<upstream-version>` — the exact upstream tag, such as `v0.19.0`.
+- `upstream-<commit>` — the first 12 characters of the upstream source commit.
+
+The image is built for `linux/amd64` and `linux/arm64`. Its contents are derived from the official upstream tag and the independent packaging files in this repository.
 
 ### GitHub Releases
 
-After a successful Docker build and GHCR push, the workflow creates or updates a [GitHub Release](https://github.com/MikaPST/deckcraft-web/releases) matching the upstream tag. It includes the upstream release notes, source link and commit, Docker tags, supported architectures and (when available) the published image digest.
+After Docker Buildx successfully publishes the multi-platform image to GHCR, the workflow creates or updates a [GitHub Release](https://github.com/MikaPST/deckcraft-web/releases) using the corresponding upstream tag.
 
-The Release badge at the top of this README updates automatically. Scheduled runs skip versions already released here. You can force a rebuild from **Actions → Build and publish DeckCraft Web → Run workflow**.
+Each published release contains:
+
+- A link to the official upstream release and its notes.
+- The exact upstream release tag and source commit.
+- The `craft-fonts` commit used during the build.
+- The published Docker tags (`latest`, the upstream version and `upstream-<commit>`).
+- Supported architectures: `linux/amd64` and `linux/arm64`.
+- The Docker manifest digest, when available.
+- A notice that this is community-maintained packaging, not an official ArtCraft distribution.
+
+The Release badge at the top reflects the latest version published **in this repository**.
+
+Scheduled and ordinary manual checks skip versions already released here. To rebuild, open **Actions → Build and publish DeckCraft Web → Run workflow** and enable `force_rebuild`. Packaging changes on `main` rebuild the latest upstream version automatically.
 
 > [!IMPORTANT]
-> A GitHub Release is created only after the Docker image has been successfully published. The `latest` tag may change after a rebuild; pin a versioned image tag for a stable deployment. Auxiliary source repositories (for example `craft-fonts`) may be checked out separately and are not necessarily pinned to the upstream release commit.
+> A GitHub Release is created or updated **only after** a successful GHCR push. The `latest` tag is mutable, and forcing a rebuild may also replace versioned tags. Pin a digest if exact reproducibility is required.
+
+DeckCraft is actively developed. Test a new image before depending on it for important presentations.
 
 ## Unraid Community Applications
 
-This image can be used with Unraid through Docker Compose or a Community Applications template.
+DeckCraft Web is available through the maintainer's separate Unraid Community Applications template repository:
 
-The Unraid template is maintained separately in the [MikaPST/unraid-community-apps](https://github.com/MikaPST/unraid-community-apps) repository.
+- **Unraid Community Applications repository:** [MikaPST/unraid-community-apps](https://github.com/MikaPST/unraid-community-apps)
+- **DeckCraft Web template:** [deckcraft-web.xml](https://github.com/MikaPST/unraid-community-apps/blob/main/templates/deckcraft-web.xml)
+- **Container port:** `8080` (the current Unraid template defaults to host port `8091`)
 
-This repository contains the Docker image build and publication workflow; the Community Applications repository contains the Unraid-specific template.
-- **Template:** [deckcraft-web.xml](https://github.com/MikaPST/unraid-community-apps/blob/main/templates/deckcraft-web.xml)
+The template references `ghcr.io/mikapst/deckcraft-web:latest` and is maintained separately from this packaging project.
 
 ## Upstream project
 
-**DeckCraft** is an open-source presentation and slide designer written in Rust.
+DeckCraft is an open-source presentation and slide editor developed by the ArtCraft team and contributors.
 
-It aims to provide a modern slide-authoring experience, including:
-
-- Slide masters, layouts, themes and sections.
-- Shapes, connectors, text formatting and hyperlinks.
-- Pictures, tables, charts and SmartArt basics.
-- Transitions, animations and full-screen presentations.
-- Import and export of `.pptx` files, plus PDF and image exports in the upstream application.
-
-The upstream project documents its browser build as a static WebAssembly site. Not every desktop capability should be assumed to be available or identical in the browser build.
-
-- **Source code:** [github.com/storytold/deckcraft](https://github.com/storytold/deckcraft)
+- **Source code:** [storytold/deckcraft](https://github.com/storytold/deckcraft)
 - **Official website:** [getartcraft.com/apps/deckcraft](https://getartcraft.com/apps/deckcraft)
-- **Releases:** [GitHub Releases](https://github.com/storytold/deckcraft/releases)
+- **Official web hosting guide:** [Hosting DeckCraft for the web](https://github.com/storytold/deckcraft/blob/main/packaging/web/README.md)
+- **Official releases:** [DeckCraft releases](https://github.com/storytold/deckcraft/releases)
 
-This repository packages the upstream web application for Docker. It does not include the native desktop application, CLI or MCP server.
-
-The MikaPST GitHub Release tracks the upstream version but represents independent Docker packaging, not an official DeckCraft distribution.
+The MikaPST GitHub Releases reflect independently maintained Docker packaging, not official upstream distributions.
 
 ## License and attribution
 
-DeckCraft is dual-licensed under **MIT** or **Apache-2.0**, at your option. Copyright and required notices are maintained by the upstream project in its `NOTICE` file.
+DeckCraft is dual-licensed under **MIT or Apache-2.0**, at the user's option. Copyright remains with the upstream authors and contributors.
 
-Bundled fonts, icons, images and other assets may have their own licenses. Their authors, sources and licenses are documented in the upstream `ATTRIBUTION.md`.
+The upstream project includes licenses, notices and third-party asset attribution. The Docker image copies available `LICENSE-MIT`, `LICENSE-APACHE`, `NOTICE`, and `ATTRIBUTION.md` files, plus the `OFL.txt` font licenses found in the pinned `craft-fonts` checkout, into `/usr/share/licenses/deckcraft/`.
 
-The DeckCraft and ArtCraft names, logos and related brand assets are trademarks of the upstream project and are not covered by the software license.
+- [MIT License](https://github.com/storytold/deckcraft/blob/main/LICENSE-MIT)
+- [Apache 2.0 License](https://github.com/storytold/deckcraft/blob/main/LICENSE-APACHE)
+- [NOTICE](https://github.com/storytold/deckcraft/blob/main/NOTICE)
+- [Asset attribution](https://github.com/storytold/deckcraft/blob/main/ATTRIBUTION.md)
 
-The Docker packaging files in this repository are provided separately from the upstream application. Refer to the upstream repository for the complete license texts, notices and asset attributions.
+The upstream application's licenses do not automatically set the license for this repository's independently maintained packaging configuration. Refer to a repository `LICENSE` file if one is published.
+
+The DeckCraft and ArtCraft names, branding and logos retain their own trademark and usage terms. This repository is independently maintained and **is not affiliated with or endorsed by** the original project maintainers.
 
 ## Disclaimer
 
-This is an independent community packaging project and is not affiliated with, endorsed by, or supported by the ArtCraft team.
-
-All product names, trademarks and logos are the property of their respective owners.
+DeckCraft is actively developed and its behaviour, file compatibility and supported features may change between releases. Use the application and keep independent backups of important presentation files.
